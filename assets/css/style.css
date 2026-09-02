@@ -16,10 +16,16 @@
   --serif:"Playfair Display",Georgia,"Times New Roman",serif;
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 
+  /* display sizes — exact Figma values; fluid ramps live in the <1440 block */
   --fs-h1:63px;
   --fs-h2:47px;
   --fs-h3:30px;
   --fs-h3-app:26px;
+  --fs-stat:57px;           /* .stat__num          */
+  --fs-h2-cta:35px;         /* .cta-card .h2       */
+  --fs-h2-quality:37px;     /* .quality__card .h2  */
+  --fs-contact:36px;        /* .contact__title     */
+  --fs-pcard:23px;          /* .pcard__label       */
   --fs-lede:18px;
   --fs-body:16px;
 
@@ -159,6 +165,13 @@ input,select,textarea{font:inherit;color:inherit}
   text-transform:uppercase;color:var(--ink);
 }
 .submenu a:hover{background:#f3f3f1}
+/* twelve products is too tall for one column — split it */
+.submenu--cols{
+  display:grid;grid-template-columns:1fr 1fr;
+  grid-auto-flow:column;grid-template-rows:repeat(5,auto);
+  min-width:428px;
+}
+.submenu--cols a{white-space:nowrap}
 
 .nav__toggle{display:none;width:44px;height:44px;flex-direction:column;justify-content:center;gap:5px;margin-left:auto}
 .nav__toggle span{display:block;height:1.5px;background:#fff;transition:transform .25s var(--ease),opacity .2s}
@@ -177,10 +190,19 @@ input,select,textarea{font:inherit;color:inherit}
    ============================================================ */
 .hero{
   position:relative;
+  /* full viewport height, layered fallbacks:
+     686px  -> browsers with no viewport units at all
+     100vh  -> older browsers (overflows behind mobile URL bars, hence the next line)
+     100svh -> the *small* viewport: the height with browser chrome shown, so the
+               hero never sits under an iOS/Android URL bar. min-height (not height)
+               so the box still grows when the copy needs more room. */
   min-height:686px;
-  display:flex;align-items:flex-start;justify-content:center;
+  min-height:100vh;
+  min-height:100svh;
+  display:flex;align-items:center;justify-content:center;
   text-align:center;color:#fff;overflow:hidden;
-  padding:180px 24px 96px;
+  /* top clears the absolute header (34 + 58px logo), bottom clears .hero__scroll */
+  padding:132px 24px 116px;
 }
 .hero__bg{
   position:absolute;inset:0;width:100%;height:100%;
@@ -200,12 +222,16 @@ input,select,textarea{font:inherit;color:inherit}
 .hero .btn-row{justify-content:center;margin-top:34px}
 
 .hero__scroll{
-  position:absolute;left:50%;bottom:36px;transform:translateX(-50%);
+  position:absolute;left:50%;bottom:28px;transform:translateX(-50%);
   z-index:2;color:#fff;opacity:.9;
+  width:44px;height:44px;display:grid;place-items:center;   /* 44x44 tap target */
 }
 .hero__scroll svg{animation:bob 2.4s var(--ease) infinite}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
 @media (prefers-reduced-motion:reduce){.hero__scroll svg{animation:none}}
+
+/* short-viewport hero handling lives at the end of the file — it has to win
+   against the width breakpoints, which set .hero padding at equal specificity */
 
 /* ============================================================
    ABOUT
@@ -242,7 +268,7 @@ input,select,textarea{font:inherit;color:inherit}
 .stat{text-align:center;padding:5px 6px}
 .stat+.stat{border-left:1px solid #d5d5d5}
 .stat__num{
-  font-family:var(--serif);font-weight:700;font-size:57px;line-height:1;
+  font-family:var(--serif);font-weight:700;font-size:var(--fs-stat);line-height:1;
   letter-spacing:-.01em;
 }
 .stat__label{margin:14px 0 0;font-size:16px;color:var(--ink)}
@@ -279,16 +305,25 @@ input,select,textarea{font:inherit;color:inherit}
 .range__arrow.is-active{background:rgba(255,255,255,.42);border-color:transparent}
 .range__arrow:disabled{opacity:.35;cursor:not-allowed}
 
-.range__viewport{overflow:hidden}
+/* Carousel. Sized for an arbitrary card count (1..12+): the track is a plain flex
+   row that is clipped by the viewport, so extra cards never widen the page.
+   touch-action:pan-y lets JS own horizontal swipes while the page still scrolls. */
+.range__viewport{overflow:hidden;touch-action:pan-y}
+.range__viewport:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.range__viewport.is-draggable{cursor:grab}
+.range__viewport.is-dragging{cursor:grabbing}
+.range__track{will-change:transform}
 .range__track{
   display:flex;gap:25px;
   transition:transform .55s var(--ease);
 }
 .pcard{flex:0 0 348px;background:#fff;color:var(--ink)}
-.pcard img{width:100%;aspect-ratio:348/369;object-fit:cover}
+.pcard img{width:100%;aspect-ratio:348/369;object-fit:cover;-webkit-user-drag:none;user-select:none}
 .pcard__label{
-  display:flex;align-items:center;justify-content:center;
-  height:50px;font-size:23px;letter-spacing:0;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  min-height:50px;padding:8px 12px;
+  font-size:var(--fs-pcard);line-height:1.2;letter-spacing:0;
+  overflow-wrap:anywhere;                 /* tolerate longer product names */
 }
 
 /* ============================================================
@@ -325,13 +360,17 @@ input,select,textarea{font:inherit;color:inherit}
    ============================================================ */
 .cta-band{position:relative;line-height:0}
 .cta-band__bg{display:block;width:100%;height:713px;object-fit:cover;object-position:center}
+/* The card is full-bleed to the left edge, so its left padding has to equal the
+   page gutter or the copy stops lining up with the 1200px column above 1440px.
+   At <=1440px max() resolves to 120px -> identical to the Figma rendering. */
 .cta-card{
   position:absolute;left:0;bottom:0;
-  width:620px;max-width:100%;
+  width:calc(500px + max(120px, calc((100% - 1200px) / 2)));
+  max-width:100%;
   background:#fff;
-  padding:47px 60px 42px 120px;
+  padding:47px 60px 42px max(120px, calc((100% - 1200px) / 2));
 }
-.cta-card .h2{font-size:35px;line-height:1.4286;/* 50/35 */margin-bottom:32px}
+.cta-card .h2{font-size:var(--fs-h2-cta);line-height:1.4286;/* 50/35 */margin-bottom:32px}
 
 /* ============================================================
    APPLICATIONS
@@ -391,7 +430,7 @@ input,select,textarea{font:inherit;color:inherit}
   background:#fff;padding:64px 80px 62px 56px;
   box-shadow:0 26px 60px rgba(0,0,0,.10);
 }
-.quality__card .h2{font-size:37px;line-height:1.24;margin-top:12px}
+.quality__card .h2{font-size:var(--fs-h2-quality);line-height:1.24;margin-top:12px}
 .quality__copy{margin-top:25px;max-width:590px}
 .quality__hl{
   display:flex;align-items:center;gap:22px;
@@ -420,7 +459,7 @@ input,select,textarea{font:inherit;color:inherit}
 .contact__img{width:100%;height:100%;object-fit:cover;min-height:670px}
 .contact__panel{background:var(--panel);padding:59px 78px 9px;text-align:center}
 .contact__title{
-  font-family:var(--serif);font-weight:700;font-size:36px;line-height:1.1;
+  font-family:var(--serif);font-weight:700;font-size:var(--fs-contact);line-height:1.1;
   letter-spacing:.01em;text-transform:uppercase;
 }
 .contact__sub{margin-top:12px;font-size:19px;color:var(--ink)}
@@ -522,13 +561,43 @@ input,select,textarea{font:inherit;color:inherit}
    RESPONSIVE
    ============================================================ */
 @media (max-width:1439px){
-  :root{--fs-h1:clamp(38px,4.4vw,63px);--fs-h2:clamp(30px,3.26vw,47px);--fs-h3:clamp(23px,2.1vw,30px);--fs-h3-app:clamp(20px,1.8vw,26px)}
+  /* Fluid display type. Each ramp is a straight line through the Figma value at
+     1440px and a comfortable small-screen value at 360px, so nothing steps at a
+     breakpoint and every size hits its exact Figma px at 1440 (where these are
+     switched off entirely and the fixed :root values apply).
+       h1  63 -> 34   h2  47 -> 27   h3  30 -> 21   h3-app 26 -> 19
+       stat 57 -> 34  cta 35 -> 24   quality 37 -> 25  contact 36 -> 26  pcard 23 -> 18 */
+  :root{
+    --fs-h1:clamp(34px, 24.33px + 2.685vw, 63px);
+    --fs-h2:clamp(27px, 20.33px + 1.852vw, 47px);
+    --fs-h3:clamp(21px, 18px + .833vw, 30px);
+    --fs-h3-app:clamp(19px, 16.67px + .648vw, 26px);
+    --fs-stat:clamp(34px, 26.33px + 2.13vw, 57px);
+    --fs-h2-cta:clamp(24px, 20.33px + 1.019vw, 35px);
+    --fs-h2-quality:clamp(25px, 21px + 1.111vw, 37px);
+    --fs-contact:clamp(26px, 22.67px + .926vw, 36px);
+    --fs-pcard:clamp(18px, 16.33px + .463vw, 23px);
+  }
   .about__grid{grid-template-columns:minmax(0,480px) minmax(0,600px);gap:0 60px}
   .why__grid{grid-template-columns:repeat(2,minmax(0,570px));gap:0 40px}
   .range__grid{grid-template-columns:minmax(300px,479px) 1fr}
-  .contact__wrap{grid-template-columns:minmax(0,566px) 1fr;padding-inline:24px}
+  .contact__wrap{grid-template-columns:minmax(0,566px) minmax(0,1fr);padding-inline:24px}
+  /* 78px of panel padding is most of the column once it narrows */
+  .contact__panel{padding-inline:clamp(28px,6.4vw,78px)}
   .quality__card{width:min(795px,72%)}
   .footer__grid{grid-template-columns:minmax(0,492px) auto auto;gap:40px}
+  /* the 713px band is nearly square once the frame narrows — keep it proportional */
+  .cta-band__bg{height:clamp(420px,49.5vw,713px)}
+}
+
+/* nav breathing room before the burger takes over at 860 */
+@media (max-width:1200px){
+  .nav__group{gap:32px}
+  .nav__group--left{padding-right:44px}
+  .nav__group--right{padding-left:44px}
+}
+@media (max-width:1100px){
+  .submenu a{padding-block:13px}      /* 44px tap target on tablets */
 }
 
 @media (max-width:1100px){
@@ -540,9 +609,11 @@ input,select,textarea{font:inherit;color:inherit}
   .apps{grid-template-columns:repeat(2,minmax(0,1fr))}
   .quality__wrap{min-height:0}
   .quality__img{position:static;width:100%;height:clamp(240px,42vw,420px)}
-  .quality__card{width:100%;margin-top:-90px;padding:48px 40px;box-shadow:0 20px 50px rgba(0,0,0,.12)}
+  .quality__card{width:100%;margin-top:clamp(-90px,-8vw,-40px);padding:48px 40px;box-shadow:0 20px 50px rgba(0,0,0,.12)}
   .quality__card::before{display:none}
-  .contact__wrap{grid-template-columns:1fr}
+  /* minmax(0,1fr): a bare 1fr floors at the panel's min-content width and blew the
+     page out by 20px at 320 (the nowrap submit button) */
+  .contact__wrap{grid-template-columns:minmax(0,1fr)}
   .contact__img{min-height:0;aspect-ratio:566/420}
   .footer__grid{grid-template-columns:1fr 1fr;gap:48px}
   .footer__maps{grid-template-columns:1fr;max-width:420px;margin-inline:auto}
@@ -557,12 +628,17 @@ input,select,textarea{font:inherit;color:inherit}
   .mobile-nav[hidden]{display:none}
   .site-header.is-open{background:rgba(30,33,30,.97)}
 
-  .hero{min-height:600px;padding:118px 24px 78px}
+  /* hero keeps the full-viewport min-height from the base rule; only the
+     internal padding shrinks so the copy is not crushed against the chrome */
+  .hero{padding:96px 24px 92px}
   .about{padding:72px 0 80px}
   .range{padding:72px 0 74px}
-  .range__grid{grid-template-columns:1fr;padding-left:24px}
+  .range__grid{grid-template-columns:minmax(0,1fr);padding-left:24px}
   .range__intro{padding-top:0;max-width:none;padding-right:24px}
   .range__copy{max-width:none}
+  /* narrower cards so a slice of the next one shows and the carousel reads as swipeable */
+  .range__track{gap:16px}
+  .pcard{flex:0 0 clamp(232px,78vw,348px)}
   .why{padding:72px 0 76px}
   .applications{padding:72px 0 76px}
   .apps{grid-template-columns:1fr;gap:24px}
@@ -577,23 +653,67 @@ input,select,textarea{font:inherit;color:inherit}
   .contact__panel{padding:44px 24px 48px}
   .contact{margin-bottom:0}
   .footer{margin-top:0;padding-top:72px}
-  .footer__grid{grid-template-columns:1fr;gap:40px}
-  .fcontact{grid-template-columns:1fr;gap:6px}
-  .fcontact dd{text-align:left;margin-bottom:12px}
+  .footer__grid{grid-template-columns:minmax(0,1fr);gap:40px}
+  .fcontact{grid-template-columns:minmax(0,1fr);gap:6px}
+  .fcontact dd{text-align:left;margin-bottom:12px;overflow-wrap:anywhere}
   .footer__bar{justify-content:flex-start;gap:8px;flex-direction:column}
   .deco{display:none}
+
+  /* ---- 44px touch targets ---- */
+  .btn{min-height:44px}
+  /* invisible hit area so the underline stays tight to the text */
+  .footer__col ul li+li{margin-top:26px}
+  .footer__col ul a,.footer__bar a,.link-arrow{position:relative}
+  .footer__col ul a::after,.footer__bar a::after,.link-arrow::after{
+    content:"";position:absolute;left:-8px;right:-8px;top:-12px;bottom:-12px;
+  }
+  .fcontact dd a{display:inline-block;max-width:100%;padding-block:12px;margin-block:-12px}
 }
 
 @media (max-width:520px){
-  .about__pair{grid-template-columns:1fr;gap:16px}
-  .stats{grid-template-columns:1fr;gap:24px}
+  .about__pair{grid-template-columns:minmax(0,1fr);gap:16px}
+  .stats{grid-template-columns:minmax(0,1fr);gap:24px}
   .stat+.stat{border-left:0;border-top:1px solid #d5d5d5;padding-top:24px}
-  .checks{grid-template-columns:1fr}
+  .checks{grid-template-columns:minmax(0,1fr)}
   .btn{width:100%}
   .btn-row{flex-direction:column;gap:14px}
-  .contact__title{font-size:30px}
+  /* nowrap + 38px side padding made the submit button the widest thing on the
+     page at 320; let it wrap and tighten the padding */
+  .btn,.cform__actions .btn{white-space:normal;padding-inline:20px;line-height:1.25}
+  .quality__card{padding:34px 22px 38px}
+  .contact__panel{padding:40px 20px 44px}
+  .fcontact dt,.fcontact dd{font-size:14px;letter-spacing:.03em}
+  .footer__maps{padding-inline:20px}
+}
+
+/* very narrow phones — buy back side gutter so nothing is forced to overflow */
+@media (max-width:360px){
+  .container,.quality__wrap,.contact__wrap{padding-inline:18px}
+  .range__grid{padding-left:18px}
+  .range__intro{padding-right:18px}
+  .hero,.cta-partner,.cta-card,.contact__panel{padding-inline:18px}
+  .quality__card{padding-inline:18px}
+  .footer__maps{padding-inline:18px}
 }
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
+
+/* ============================================================
+   SHORT VIEWPORTS  (landscape phones, split-screen windows)
+   Last in the file on purpose: the width breakpoints above set .hero padding at
+   equal specificity, so this has to come after them to win.
+   ============================================================ */
+@media (max-height:560px) and (orientation:landscape){
+  /* 100svh is only ~375px on a landscape phone, so the base padding would leave
+     almost no room for the copy. min-height (not height) still lets the hero grow
+     past the viewport when it has to — this just stops it wasting what it has. */
+  .hero{padding:76px 24px 56px}
+  .hero__title{margin-top:10px}
+  .hero__lede{margin-top:12px;font-size:15px;line-height:1.45}
+  .hero .btn-row{margin-top:20px;flex-direction:row;justify-content:center}
+  .hero .btn{width:auto}
+  .hero__scroll{display:none}          /* nothing to point at; it would overlap */
+  :root{--fs-h1:clamp(26px,5.2vh,42px);--fs-lede:15px}
 }
